@@ -1,9 +1,7 @@
-package com.virtusa.jenkins_services.config;
+import com.jenkins_services.model.GlobalProperties;
+import com..jenkins_services.resources.*;
 
-import com.virtusa.jenkins_services.model.GlobalProperties;
-import com.virtusa.jenkins_services.resources.*;
-
-import com.virtusa.jenkins_services.util.JenkinsUtil;
+import com.jenkins_services.util.JenkinsUtil;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
