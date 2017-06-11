@@ -1,4 +1,4 @@
-package com.virtusa.jenkins_services.util;
+package com.jenkins_services.util;
 
 import org.apache.commons.exec.*;
 
