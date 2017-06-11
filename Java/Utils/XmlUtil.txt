@@ -1,0 +1,223 @@
+package com.virtusa.jenkins_services.util;
+
+import com.virtusa.jenkins_services.model.Installation;
+import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.*;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.xpath.XPathExpressionException;
+import java.io.*;
+import java.util.Map;
+
+
+public abstract class XmlUtil {
+
+    private static final Logger LOGGER = Logger.getLogger(XmlUtil.class);
+
+    /**
+     * @param filePath
+     * @return
+     * @throws ParserConfigurationException
+     * @throws IOException
+     * @throws SAXException
+     */
+    public static Document readXmlDocument(final String filePath) throws ParserConfigurationException, IOException, SAXException {
+        File xmlFile = new File(filePath);
+        DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+        Document document = dBuilder.parse(xmlFile);
+        document.getDocumentElement().normalize();
+
+        LOGGER.debug("XML read success: " + filePath);
+        return document;
+    }
+
+
+    /**
+     * @param document
+     * @param writePath
+     * @throws TransformerException
+     */
+    public static void writeDocument(final Document document, final String writePath) throws TransformerException {
+        LOGGER.debug(writePath);
+        //write the updated document to file or console
+        document.getDocumentElement().normalize();
+        TransformerFactory transformerFactory = TransformerFactory.newInstance();
+        Transformer transformer = transformerFactory.newTransformer();
+        DOMSource source = new DOMSource(document);
+        StreamResult result = new StreamResult(new File(writePath).getPath());
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.transform(source, result);
+
+        LOGGER.debug("XML write success: " + writePath);
+
+    }
+
+    /**
+     * @param configurationMap
+     * @param document
+     * @return
+     * @throws XPathExpressionException
+     */
+    public static Document editDocument(final Map<String, String> configurationMap, final Document document) throws XPathExpressionException {
+        for (Map.Entry<String, String> entry : configurationMap.entrySet()) {
+
+            //run xpath expression on the document
+            if (!entry.getKey().equals("null")) {
+                if (XpathUtil.getNode((String.format("%s", entry.getKey())), document) != null) {
+                    Node node = XpathUtil.getNode(String.format("%s", entry.getKey()), document);
+                    node.getFirstChild().setNodeValue(entry.getValue());
+                }
+            }
+        }
+        return document;
+    }
+
+    /**
+     * @param replaceNode
+     * @param appendToXml
+     * @param appendingXml
+     * @return
+     * @throws IOException
+     * @throws SAXException
+     * @throws ParserConfigurationException
+     * @throws XPathExpressionException
+     * @throws TransformerException
+     */
+    public static Document appendDocument(final String replaceNode, Document appendToXml, final Document appendingXml) throws IOException, SAXException, ParserConfigurationException, XPathExpressionException, TransformerException {
+
+        Node node = XpathUtil.getNode(String.format("//%s", replaceNode), appendToXml).getFirstChild();
+
+        //check for node has children. If exist, append; else replaces
+        if (node != null) {
+            appendToXml=appendNode(node.getParentNode().getNodeName(),appendToXml,appendingXml);
+
+           /* appendToXml = appendNode(node.getFirstChild().getNodeName(), appendToXml, appendingXml);
+*/
+        } else {
+
+            appendToXml = replaceNode(replaceNode, appendToXml, appendingXml);
+        }
+
+        return appendToXml;
+    }
+
+
+    /**
+     * @param appendNodeEle
+     * @param appendToDocument
+     * @param appendDocument
+     * @throws IOException
+     * @throws SAXException
+     * @throws ParserConfigurationException
+     * @throws TransformerException
+     * @throws XPathExpressionException
+     */
+    private static Document appendNode(final String appendNodeEle, final Document appendToDocument, final Document appendDocument) throws IOException, SAXException, ParserConfigurationException, TransformerException, XPathExpressionException {
+
+        Node node = XpathUtil.getNode(String.format("//%s", appendNodeEle), appendToDocument);
+
+        Node replaceNode = appendDocument.getFirstChild();
+
+        Node ImportedNode = appendToDocument.importNode(replaceNode, Boolean.TRUE);
+
+        node.appendChild(ImportedNode);
+
+        LOGGER.debug("Node Appended");
+
+        return appendToDocument;
+
+
+    }
+
+
+    /**
+     * @param replaceNodeEle
+     * @param replaceToDocument
+     * @param replaceDocument
+     * @return
+     * @throws XPathExpressionException
+     */
+    private static Document replaceNode(final String replaceNodeEle, final Document replaceToDocument, final Document replaceDocument) throws XPathExpressionException {
+
+        Node node = XpathUtil.getNode(String.format("//%s", replaceNodeEle), replaceToDocument);
+
+        Node replaceNode = replaceDocument.getFirstChild();
+
+        Node ImportedNode = replaceToDocument.importNode(replaceNode, Boolean.TRUE);
+
+        node.getParentNode().replaceChild(ImportedNode, node);
+
+        LOGGER.debug("Node Replaced");
+
+        return replaceToDocument;
+
+
+    }
+
+
+    /**
+     * @param jobName
+     * @return JobConfigXmlPath
+     */
+    public static String getJobConfigXmlPath(final String jobName) {
+        return JenkinsUtil.getJenkinsHome() + File.separator + "jobs" + File.separator + jobName
+                + File.separator + "config.xml";
+    }
+
+    /**
+     * @param document
+     * @return
+     * @throws TransformerException
+     */
+    public static ByteArrayInputStream convertDocumentToInputStream(Document document) throws TransformerException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        Source xmlSource = new DOMSource(document);
+        Result outputTarget = new StreamResult(outputStream);
+        TransformerFactory.newInstance().newTransformer().transform(xmlSource, outputTarget);
+        ByteArrayInputStream is = new ByteArrayInputStream(outputStream.toByteArray());
+        return is;
+
+    }
+
+    /**\
+     *
+     * @param installation
+     * @param document
+     * @param parentElement
+     * @param settingElement
+     * @return
+     * @throws TransformerException
+     */
+    public static Document appendSettingNode(Installation installation, final Document document, final String parentElement, final String settingElement) throws TransformerException {
+        Document appendToDoc=document;
+        NodeList parentElements = appendToDoc.getElementsByTagName(parentElement);
+        Element settingParent = (Element) parentElements.item(0);
+
+        Element settingEle = appendToDoc.createElement(settingElement);
+        settingParent.appendChild(settingEle);
+
+        Element settingName = appendToDoc.createElement("name");
+        settingName.appendChild(appendToDoc.createTextNode(installation.getName()));
+        settingEle.appendChild(settingName);
+
+        Element settingHome = appendToDoc.createElement("home");
+        settingHome.appendChild(document.createTextNode(installation.getPath()));
+        settingEle.appendChild(settingHome);
+        LOGGER.debug("Node Append Successful");
+        return appendToDoc;
+
+    }
+
+
+}

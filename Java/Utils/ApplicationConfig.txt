@@ -1,0 +1,94 @@
+package com.virtusa.jenkins_services.config;
+
+import com.virtusa.jenkins_services.model.GlobalProperties;
+import com.virtusa.jenkins_services.resources.*;
+
+import com.virtusa.jenkins_services.util.JenkinsUtil;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
+
+import org.glassfish.jersey.media.multipart.MultiPartFeature;
+
+import javax.ws.rs.core.Application;
+
+import java.io.IOException;
+import java.util.HashSet;
+
+import java.util.Set;
+
+/**
+ * Created by pcnfernando on 3/16/2016.
+ */
+
+public class ApplicationConfig extends Application {
+
+    /**
+     * Register the resource classes.
+     *
+     * @return registered classes
+     */
+    private static final Logger LOGGER = Logger.getLogger(ApplicationConfig.class);
+
+    static {
+        PropertyConfigurator.configure(System.getProperty("era.log4j.config.path", "./config/log4j.conf"));
+
+
+        try {
+            JenkinsUtil.initJenkinsSettings();
+            GlobalProperties.initGlobalProperties();
+        } catch (IOException e) {
+            LOGGER.debug("Error in initialisation: ", e);
+
+        }
+
+    }
+
+
+    public Set<Class<?>> getClasses() {
+        Set<Class<?>> resources = new HashSet<Class<?>>();
+
+        resources.add(MultiPartFeature.class);
+
+        //resource to CheckoutConfiguration
+        resources.add(ConfigureCheckoutResource.class);
+        LOGGER.debug("ConfigureCheckoutResource loaded");
+
+        //resource to configure global settings
+        resources.add(GlobalSettingsResource.class);
+        LOGGER.debug("GlobalSettingsResource loaded");
+
+        //resource to FileExplorer
+        resources.add(FileExplorerResource.class);
+        LOGGER.debug("FileExplorerResource loaded");
+
+        //resource to check a valid directory
+        resources.add(DirectoryValidityResource.class);
+        LOGGER.debug("DirectoryValidityResource loaded");
+
+        //resource to read existing job configuration
+        resources.add(JobConfigurationsResource.class);
+        LOGGER.debug("JobConfigurationsResource loaded");
+
+        //resource to configure build step
+        resources.add(ConfigureBuildResource.class);
+        LOGGER.debug("ConfigureBuildResource loaded");
+
+        //resource to execute analyser on codebranch
+        resources.add(ConfigureAnalyserRunResource.class);
+        LOGGER.debug("ConfigureAnalyserRunResource loaded");
+
+        //resource to read existing jenkins crednentials
+        resources.add(CredentialsResource.class);
+        LOGGER.debug("CredentialsResource loaded");
+
+        //resource get and set org unit
+        resources.add(OrgUnitResource.class);
+        LOGGER.debug("OrgUnitResource loaded");
+
+        resources.add(JenkinsResource.class);
+        LOGGER.debug("JenkinsResource loaded");
+
+        return resources;
+
+    }
+}

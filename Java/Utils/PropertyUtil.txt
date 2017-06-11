@@ -1,0 +1,130 @@
+package com.virtusa.jenkins_services.util;
+
+
+import org.apache.log4j.Logger;
+import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+
+/**
+ * Created by rajmiandad on 1/12/16.
+ */
+public class PropertyUtil {
+
+    private final Map<String, Properties> propertyRepo;
+    private static final Logger LOGGER = Logger.getLogger(PropertyUtil.class);
+
+    /**
+     *
+     */
+    private PropertyUtil() {
+        propertyRepo = new HashMap<>();
+    }
+
+    /**
+     * @param propertyFileLocation
+     * @param property
+     * @param defaultValue
+     * @return
+     */
+    public String getProperty(final String propertyFileLocation, final String property, final String defaultValue) throws IOException {
+
+        Properties properties = propertyRepo.get(propertyFileLocation);
+
+        if (properties == null) {
+            properties = loadProperties(propertyFileLocation);
+            propertyRepo.put(propertyFileLocation, properties);
+        }
+
+        return properties.getProperty(property) != null ? properties.getProperty(property) : defaultValue;
+    }
+
+    /**
+     * @param propertyFileLocation
+     * @param property
+     * @return
+     */
+    public String getProperty(final String propertyFileLocation, final String property) throws IOException {
+        return getProperty(propertyFileLocation, property, null);
+    }
+
+    /**
+     * @param fileLocation
+     * @return
+     */
+    private static Properties loadProperties(final String fileLocation) throws IOException {
+
+        Properties properties = new Properties();
+
+        try {
+
+            try (InputStream inputStream = new FileInputStream(fileLocation)) {
+                properties.load(inputStream);
+            }
+
+        } catch (IOException e) {
+            LOGGER.error("Error in loading property file : " + fileLocation, e);
+        }
+
+        return properties;
+    }
+
+    /**
+     * @return
+     */
+    public static PropertyUtil getInstance() {
+        return HOLDER.INSTANCE;
+    }
+
+    /**
+     *
+     */
+    private static final class HOLDER {
+        private static final PropertyUtil INSTANCE = new PropertyUtil();
+    }
+
+
+    /**
+     * Write property to property file
+     *
+     * @param propertyFileLocation
+     * @param property
+     * @param propertyValue
+     * @throws IOException
+     */
+    public void setProperty(final String propertyFileLocation, final String property, final String propertyValue) throws IOException {
+        Properties properties = propertyRepo.get(propertyFileLocation);
+
+        if (properties == null) {
+            properties = loadProperties(propertyFileLocation);
+            propertyRepo.put(propertyFileLocation, properties);
+        }
+
+        properties.setProperty(property, propertyValue);
+
+        try (FileOutputStream outStream = new FileOutputStream(propertyFileLocation)) {
+            properties.store(outStream, null);
+        }
+
+
+    }
+
+    /**
+     *
+     * @param propertyFileLocation
+     * @return
+     * @throws IOException
+     */
+    public Properties getPropertyFile(final String propertyFileLocation) throws IOException {
+        Properties properties = propertyRepo.get(propertyFileLocation);
+
+        if (properties == null) {
+            properties = loadProperties(propertyFileLocation);
+            propertyRepo.put(propertyFileLocation, properties);
+        }
+        return properties;
+
+    }
+
+}

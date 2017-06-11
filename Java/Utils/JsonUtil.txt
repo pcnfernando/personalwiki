@@ -1,0 +1,98 @@
+package com.virtusa.jenkins_services.util;
+
+import com.google.gson.Gson;
+import com.google.gson.internal.LinkedTreeMap;
+import com.virtusa.jenkins_services.model.GlobalProperties;
+import org.apache.log4j.Logger;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+
+
+/**
+ * Created by pcnfernando on 6/2/2016.
+ */
+
+/**
+ * Read utility for JSON input
+ */
+public class JsonUtil {
+
+
+    private static final Logger LOGGER = Logger.getLogger(JsonUtil.class);
+
+    /**
+     * @param inputString
+     * @return
+     * @throws IOException
+     */
+    public static JSONObject readIncomingJSON(String inputString) throws IOException {
+        JSONObject inputJsonObject = null;
+
+        //convert input string into JSONObject
+        JSONObject inputJSN = new JSONObject(inputString);
+        Object inputJSNObj = inputJSN.get("data");
+
+        if (inputJSNObj instanceof JSONObject) {
+            inputJsonObject = (JSONObject) inputJSNObj;
+            LOGGER.debug("Input is a JSON Object");
+        } else if (inputJSNObj instanceof JSONArray) {
+            inputJsonObject = ((JSONArray) inputJSNObj).getJSONObject(0);
+            LOGGER.debug("Input is a JSON Array");
+        }
+
+        return inputJsonObject;
+    }
+
+    /**
+     * @param jsonObject
+     * @return linkedTreeMap object
+     */
+    public static LinkedTreeMap getLinkedTreeMap(JSONObject jsonObject) {
+        Gson gson = new Gson();
+        LinkedTreeMap linkedTreeMap = gson.fromJson(jsonObject.toString(), LinkedTreeMap.class);
+        return linkedTreeMap;
+
+    }
+
+    /**
+     * @param jsonObject
+     * @param filepath
+     * @throws IOException
+     */
+    public static void writeFile(final JSONObject jsonObject, final String filepath) throws IOException {
+
+        try (FileWriter file = new FileWriter(filepath)) {
+            file.write(jsonObject.toString());
+            LOGGER.debug("Writing to JSON File Success");
+            LOGGER.debug("JSON: " + jsonObject.toString());
+        }
+    }
+
+   /* *//**
+     * @param filename
+     * @return
+     * @throws IOException
+     * @throws ParseException
+     *//*
+    public static org.json.simple.JSONArray readFile(final String filepath) throws IOException, ParseException {
+        JSONParser parser = new JSONParser();
+        org.json.simple.JSONArray jsonArray;
+        try (FileReader file = new FileReader(filepath)) {
+            Object obj = parser.parse(file);
+            jsonArray = (org.json.simple.JSONArray) obj;
+        }
+       *//* LOGGER.debug("Reading JSON File Success");
+        LOGGER.debug("JSON: " + jsonArray.toString());*//*
+        return jsonArray;
+    }*/
+
+
+   /* public static void main(String[] args) throws IOException, ParseException {
+        System.out.println(readFile("C:\\Projects\\Softwares\\New folder (2)\\apache-tomcat-8.0.22\\bin\\config\\app_settings\\CI_OrgUnits.json"));
+    }*/
+
+}

@@ -1,0 +1,72 @@
+package com.virtusa.jenkins_services.util;
+
+import org.apache.commons.exec.*;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+
+
+/**
+ * Util to execute batch commands
+ */
+public class CLExecutor {
+    /**
+     *
+     * @param actionCommand
+     * @param input_xml
+     * @return
+     * @throws IOException
+     */
+    public static ArrayList<String> executorUtil(final CommandLine actionCommand, InputStream input_xml)
+            throws IOException {
+
+        final ArrayList<String> console = new ArrayList<>();
+
+        DefaultExecuteResultHandler resultHandler;
+
+        try (CLLogOutputStream logOutputStream = new CLLogOutputStream(console)) {
+            DefaultExecutor executor = new DefaultExecutor();
+            resultHandler = new DefaultExecuteResultHandler();
+            executor.setStreamHandler(new PumpStreamHandler(logOutputStream, null, input_xml));
+            executor.execute(actionCommand, resultHandler);
+        }
+
+        try {
+            resultHandler.waitFor();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return console;
+    }
+
+
+    /**
+     *
+     */
+    private static class CLLogOutputStream extends LogOutputStream {
+
+        /**
+         *
+         */
+        ArrayList<String> console;
+
+        /**
+         * @param console
+         */
+        CLLogOutputStream(ArrayList<String> console) {
+            this.console = console;
+        }
+
+        @Override
+        protected void processLine(String s, int i) {
+            console.add(s);
+        }
+    }
+
+}
+
+
+
+

@@ -1,0 +1,299 @@
+package com.virtusa.jenkins_services.util;
+
+import com.virtusa.jenkins_services.model.GlobalProperties;
+import com.virtusa.jenkins_services.xmlParsers.Credentials.CredentialsXmlParser;
+import org.apache.commons.exec.CommandLine;
+import org.apache.commons.io.FileUtils;
+import org.apache.log4j.Logger;
+import org.xml.sax.SAXException;
+
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.xpath.XPathExpressionException;
+import java.io.*;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+
+/**
+ * Created by pcnfernando on 7/26/2016.
+ */
+public final class JenkinsUtil {
+
+
+    private static String jenkinsHome;
+    private static final Logger LOGGER = Logger.getLogger(JenkinsUtil.class);
+    private static final String TEMPLATE_XML_ROOT = GlobalProperties.TEMPLATE_XML_ROOT;
+
+    /**
+     * Get Jenkins Home
+     *
+     * @return
+     */
+
+    public final static String getJenkinsHome() {
+        if (jenkinsHome == null) {
+
+            String home = System.getenv("JENKINS_HOME");
+            if (home != null) {
+
+                jenkinsHome = home;
+            } else {
+                jenkinsHome = System.getProperty("user.home") + File.separator + ".jenkins";
+            }
+        }
+        return jenkinsHome;
+    }
+
+
+    private static String createJob(final String jobName, final ByteArrayInputStream jobConfigStream) throws IOException {
+        ArrayList<String> actionCommand = new ArrayList<>();
+        actionCommand.add("create-job");
+        /*ArrayList<String> console = CLExecutor.executorUtil(actionCommand, jobName, jobConfigStream);*/
+        ArrayList<String> console = JenkinsUtil.jenkinsCliUtil(actionCommand, jobName, jobConfigStream);
+        return getConsoleOutput(console);
+
+    }
+
+
+    /**
+     * Update Jenkins Job
+     *
+     * @param jobName
+     * @return
+     * @throws IOException
+     */
+    private static String updateJob(String jobName, final ByteArrayInputStream jobConfigStream) throws IOException {
+        ArrayList<String> actionCommand = new ArrayList<>();
+        actionCommand.add("update-job");
+       /* ArrayList<String> console = CLExecutor.executorUtil(actionCommand, jobName, jobConfigStream);*/
+        ArrayList<String> console = JenkinsUtil.jenkinsCliUtil(actionCommand, jobName, jobConfigStream);
+        return getConsoleOutput(console);
+    }
+
+
+    /**
+     * Trigger a job in Jenkins
+     *
+     * @param jobName
+     * @return
+     * @throws IOException
+     */
+    public final static String triggerBuild(String jobName) throws IOException {
+
+        ArrayList<String> args = new ArrayList<>();
+        args.add("build");
+        args.add(jobName);
+        args.add("-w");
+        args.add("-s");
+        args.add("-v");
+
+      /*  ArrayList<String> console = CLExecutor.executorUtil(args, null, null);*/
+        ArrayList<String> console = JenkinsUtil.jenkinsCliUtil(args, null, null);
+
+        return getConsoleOutput(console);
+
+    }
+
+    /**
+     * Reload Jenkins Configurations
+     *
+     * @return
+     * @throws IOException
+     */
+    public final static String reloadConfigurations() throws IOException {
+
+        ArrayList<String> args = new ArrayList<>();
+        args.add("reload-configuration");
+        /*ArrayList<String> console = CLExecutor.executorUtil(args, null, null);*/
+        ArrayList<String> console = JenkinsUtil.jenkinsCliUtil(args, null, null);
+
+        return getConsoleOutput(console);
+    }
+
+    /**
+     * Read Jenkins Job Configuration XML
+     *
+     * @return
+     * @throws IOException
+     */
+    private static ByteArrayInputStream getConfigFileStream(String jobConfigXml) throws IOException {
+        return new ByteArrayInputStream(FileUtils.readFileToByteArray(new File(jobConfigXml)));
+    }
+
+
+    /**
+     * Get Console output
+     *
+     * @param console
+     * @return
+     */
+    private static String getConsoleOutput(ArrayList<String> console) {
+        StringBuilder consoleValues = new StringBuilder();
+
+       /* console.stream().forEach(e -> consoleValues.append(e + "\n"));*/
+        for (int i = 0; i < console.size(); i++) {
+            consoleValues.append(console.get(i) + "\n");
+        }
+
+        return consoleValues.toString();
+    }
+
+
+    public final static void initJenkinsSettings() throws IOException {
+
+        copyFile(TEMPLATE_XML_ROOT, "config.xml");
+        copyFile(TEMPLATE_XML_ROOT, "hudson.tasks.Maven.xml");
+        copyFile(TEMPLATE_XML_ROOT, "hudson.tasks.Ant.xml");
+        copyFile(TEMPLATE_XML_ROOT, "hudson.plugins.git.GitTool.xml");
+    }
+
+
+    /**
+     * Create or Updates a job.
+     *
+     * @param jobName
+     * @param operationType
+     * @throws IOException
+     */
+    public static void configureJob(final String jobName, final String operationType, final ByteArrayInputStream jobConfigStream) throws IOException {
+        //check whether the checkout configuration is for a new job or an existing job
+        if (operationType.equals("create")) {
+            JenkinsUtil.createJob(jobName, jobConfigStream);
+            LOGGER.debug("Job " + jobName + " Created");
+
+        } else if (operationType.equals("update")) {
+            JenkinsUtil.updateJob(jobName, jobConfigStream);
+            LOGGER.debug("Job " + jobName + " Updated");
+
+        }
+    }
+
+    /**
+     *
+     * @param rootDir
+     * @param file
+     * @throws IOException
+     */
+    public final static void copyFile(final String rootDir, final String file) throws IOException {
+
+        File destinationFile = new File(getJenkinsHome(), file);
+        File sourceFile = new File(rootDir, file);
+
+        if (!destinationFile.exists()) {
+            FileUtils.copyFile(sourceFile, destinationFile);
+        }
+    }
+
+    /**
+     * @param jobName
+     * @return
+     * @throws IOException
+     */
+    public final static String deleteOldBuilds(final String jobName) throws IOException {
+        ArrayList<String> args = new ArrayList<>();
+        args.add("delete-builds");
+
+        String secondaryArgs = jobName + " '1-7499'";
+
+       /* ArrayList<String> console = CLExecutor.executorUtil(args, secondaryArgs, null);*/
+        ArrayList<String> console = JenkinsUtil.jenkinsCliUtil(args, secondaryArgs, null);
+
+        return getConsoleOutput(console);
+    }
+
+
+    public final static void deleteJobWorkspace(final String jobName) throws IOException {
+        String jobPath = getJobWorkSpacePath(jobName);
+        LOGGER.debug("Deleting workspace: " + jobPath);
+        Path path = Paths.get(jobPath);
+        deleteFileOrFolder(path);
+
+    }
+
+    /**
+     *
+     * @param jobName
+     * @return
+     */
+    private static String getJobWorkSpacePath(String jobName) {
+        return GlobalProperties.JENKINS_HOME + File.separator + "jobs" + File.separator + jobName;
+
+    }
+
+    /**
+     *
+     * @param path
+     * @throws IOException
+     */
+    private static void deleteFileOrFolder(final Path path) throws IOException {
+        Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs)
+                    throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(final Path file, final IOException e) {
+                return handleException(e);
+            }
+
+            private FileVisitResult handleException(final IOException e) {
+                e.printStackTrace(); // replace with more robust error handling
+                return FileVisitResult.TERMINATE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(final Path dir, final IOException e)
+                    throws IOException {
+                if (e != null) return handleException(e);
+                Files.delete(dir);
+                return FileVisitResult.CONTINUE;
+            }
+        });
+    }
+
+    /**
+     *
+     * @param username
+     * @param password
+     * @throws SAXException
+     * @throws TransformerException
+     * @throws ParserConfigurationException
+     * @throws XPathExpressionException
+     * @throws IOException
+     */
+    public static void addJenkinsCredentials(final String username, final String password) throws SAXException, TransformerException, ParserConfigurationException, XPathExpressionException, IOException {
+        new CredentialsXmlParser().setCredentials(username,
+                password);
+
+    }
+
+    /**
+     *
+     * @param actionCommand
+     * @param jobName
+     * @param input_xml
+     * @return
+     * @throws IOException
+     */
+    public final static  ArrayList<String> jenkinsCliUtil(final ArrayList<String> actionCommand,final String jobName,final InputStream input_xml) throws IOException {
+        String JENKINS_CLI_JAR = GlobalProperties.JENKINS_CLI_PATH;
+        String JENKINS_URL = GlobalProperties.JENKINS_URL;
+
+        CommandLine commandLine = new CommandLine("java");
+        commandLine.addArgument("-jar");
+        commandLine.addArgument(JENKINS_CLI_JAR);
+        commandLine.addArgument("-s");
+        commandLine.addArgument(JENKINS_URL);
+        commandLine.addArguments(actionCommand.toArray(new String[0]));
+        commandLine.addArgument(jobName);
+
+        ArrayList<String> console =CLExecutor.executorUtil(commandLine,input_xml);
+
+        return console;
+    }
+
+}

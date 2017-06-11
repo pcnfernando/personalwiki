@@ -1,0 +1,98 @@
+package com.virtusa.jenkins_services.util;
+
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+import javax.xml.xpath.*;
+
+/**
+ * Created by pcnfernando on 6/10/2016.
+ */
+public final class XpathUtil {
+    // Adding logger to the class
+    // private static final Logger LOGGER = Logger.getLogger(XpathUtil.class);
+
+    private XpathUtil() {
+    }
+
+    /**
+     * @param xpathString
+     * @param source
+     * @return Node
+     * <p>
+     * This method is used to retrieve node from a document or another node for a given xpath
+     */
+    public static Node getNode(String xpathString, Object source) throws XPathExpressionException {
+
+        XPathFactory xpathfactory = XPathFactory.newInstance();
+        XPath xpath = xpathfactory.newXPath();
+
+        XPathExpression expr = xpath.compile(xpathString);
+        Object result = expr.evaluate(source, XPathConstants.NODE);
+        Node node = (Node) result;
+        return node;
+
+    }
+
+    /**
+     * @param xpathString
+     * @param source
+     * @return NodeList
+     * <p>
+     * This method is used to retrieve node from a document or another node for a given xpath
+     */
+    public static NodeList getNodes(String xpathString, Object source) throws XPathExpressionException {
+
+        XPathFactory xpathfactory = XPathFactory.newInstance();
+        XPath xpath = xpathfactory.newXPath();
+
+        XPathExpression expr = xpath.compile(xpathString);
+
+
+        Object result = expr.evaluate(source, XPathConstants.NODESET);
+
+        NodeList nodeList = (NodeList) result;
+
+        return nodeList;
+    }
+
+    /**
+     * @param node
+     * @param attribute
+     * @return String
+     */
+    public static String getAttributeValue(Node node, String attribute) {
+        return node.getAttributes().getNamedItem(attribute).getNodeValue();
+    }
+
+
+    /**
+     * @param expression
+     * @param source
+     * @return
+     */
+    public static boolean isNodeEmpty(String expression, Object source) throws XPathExpressionException {
+        if (getNode(expression, source) != null) {
+            return false;
+        }
+        return true;
+
+    }
+
+    /**
+     * @param expression
+     * @param source
+     * @return
+     * @throws XPathExpressionException
+     */
+    public static String getNodeValue(final String expression, Object source) throws XPathExpressionException {
+        Node node = getNode(expression, source);
+
+        if (node != null) {
+            return node.getFirstChild().getNodeValue();
+        }
+
+        return null;
+
+    }
+}
