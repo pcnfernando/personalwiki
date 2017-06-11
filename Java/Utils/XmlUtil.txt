@@ -1,6 +1,6 @@
-package com.virtusa.jenkins_services.util;
 
-import com.virtusa.jenkins_services.model.Installation;
+
+import com.jenkins_services.model.Installation;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
