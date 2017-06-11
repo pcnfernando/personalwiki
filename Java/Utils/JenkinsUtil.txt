@@ -1,7 +1,5 @@
-package com.virtusa.jenkins_services.util;
-
-import com.virtusa.jenkins_services.model.GlobalProperties;
-import com.virtusa.jenkins_services.xmlParsers.Credentials.CredentialsXmlParser;
+import com.jenkins_services.model.GlobalProperties;
+import com.jenkins_services.xmlParsers.Credentials.CredentialsXmlParser;
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
